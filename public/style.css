@@ -2403,4 +2403,51 @@ h3 {
     .review-form-container {
         padding: 24px 16px;
     }
-}
+
+    /* ---- Profile Sidebar → Bottom Sheet on Mobile ---- */
+    .profile-sidebar {
+        top: auto !important;
+        right: 0 !important;
+        left: 0 !important;
+        bottom: -100% !important;
+        width: 100% !important;
+        height: 85vh !important;
+        border-radius: 20px 20px 0 0 !important;
+        box-shadow: 0 -8px 30px rgba(0, 0, 0, 0.2) !important;
+        /* Override base transition from 'right' to 'bottom' */
+        transition: bottom 0.4s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+    }
+
+    .profile-sidebar.active {
+        bottom: 0 !important;
+    }
+
+    /* Drag handle indicator at top */
+    .profile-sidebar .profile-main-header::before {
+        content: '';
+        display: block;
+        width: 40px;
+        height: 4px;
+        background: #ccc;
+        border-radius: 4px;
+        margin: 10px auto 4px;
+    }
+
+    /* Sticky header inside bottom sheet */
+    .profile-sidebar .sidebar-header {
+        position: sticky;
+        top: 0;
+        z-index: 5;
+        background: white;
+        border-radius: 20px 20px 0 0;
+        padding: 10px 20px 16px;
+    }
+
+    /* Scrollable content area */
+    .profile-sidebar .sidebar-content {
+        overflow-y: auto;
+        max-height: calc(85vh - 80px);
+        -webkit-overflow-scrolling: touch;
+    }
+}
+
