@@ -1,4 +1,21 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // --- Mobile Hamburger Menu ---
+    const hamburgerBtn = document.getElementById('hamburger-btn');
+    const navLinksEl = document.getElementById('nav-links');
+    if (hamburgerBtn && navLinksEl) {
+        hamburgerBtn.addEventListener('click', () => {
+            hamburgerBtn.classList.toggle('active');
+            navLinksEl.classList.toggle('mobile-open');
+        });
+        // Close menu on link click
+        navLinksEl.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', () => {
+                hamburgerBtn.classList.remove('active');
+                navLinksEl.classList.remove('mobile-open');
+            });
+        });
+    }
+
     // Navbar scroll effect
     const navbar = document.getElementById('navbar');
 
@@ -250,6 +267,21 @@ document.addEventListener('DOMContentLoaded', () => {
     // Add to Cart Event
     document.querySelectorAll('.add-to-cart').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            const user = localStorage.getItem('sunfresh_user');
+            if (!user) {
+                // Close product modal first if open, then show auth modal
+                const productModalEl = document.getElementById('product-modal');
+                if (productModalEl && productModalEl.classList.contains('active')) {
+                    productModalEl.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+                // Small delay to let product modal close before opening auth modal
+                setTimeout(() => {
+                    const authModalEl = document.getElementById('auth-modal');
+                    if (authModalEl) authModalEl.classList.add('active');
+                }, 100);
+                return;
+            }
             const card = e.target.closest('.product-card');
             const modal = e.target.closest('.product-modal');
 
@@ -283,9 +315,47 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    function autofillCheckoutForm() {
+        const user = JSON.parse(localStorage.getItem('sunfresh_user'));
+        if (user) {
+            const profile = JSON.parse(localStorage.getItem('sunfresh_profile') || '{}');
+            const nameInput = document.getElementById('faculty-name');
+            if (nameInput) nameInput.value = user.name || '';
+
+            const mobileInput = document.getElementById('faculty-mobile');
+            if (mobileInput) mobileInput.value = user.mobile || '';
+
+            const emailInput = document.getElementById('faculty-email');
+            if (emailInput) {
+                emailInput.value = (user.email && user.email !== "Not Provided") ? user.email : (profile.email || '');
+            }
+
+            const deptSelect = document.getElementById('faculty-dept');
+            if (deptSelect && profile.department) {
+                deptSelect.value = profile.department;
+                const event = new Event('change');
+                deptSelect.dispatchEvent(event);
+            }
+        }
+    }
+
     // Buy Now Event (Direct Checkout)
     document.querySelectorAll('.buy-now').forEach(btn => {
         btn.addEventListener('click', (e) => {
+            const user = localStorage.getItem('sunfresh_user');
+            if (!user) {
+                // Close product modal first if open, then show auth modal
+                const productModalEl = document.getElementById('product-modal');
+                if (productModalEl && productModalEl.classList.contains('active')) {
+                    productModalEl.classList.remove('active');
+                    document.body.style.overflow = 'auto';
+                }
+                setTimeout(() => {
+                    const authModalEl = document.getElementById('auth-modal');
+                    if (authModalEl) authModalEl.classList.add('active');
+                }, 100);
+                return;
+            }
             const card = e.target.closest('.product-card');
             const modal = e.target.closest('.product-modal');
 
@@ -315,6 +385,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Track item for direct checkout
                 checkoutItems = [{ id: productId, name: name, price: price, quantity: quantity }];
                 
+                autofillCheckoutForm();
                 orderModal.classList.add('active');
             }
         });
@@ -344,6 +415,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         cartSidebar.classList.remove('active');
         document.body.classList.remove('cart-open');
+        autofillCheckoutForm();
         orderModal.classList.add('active');
     });
 
@@ -376,7 +448,10 @@ document.addEventListener('DOMContentLoaded', () => {
             finalDept = otherDeptInput.value;
         }
 
-        const formUrl = "https://formspree.io/janardhanrao1609@gmail.com";
+        const formUrl = "https://formspree.io/sunfreshnaturals@gmail.com";
+
+        const loggedInUser = JSON.parse(localStorage.getItem('sunfresh_user') || '{}');
+        const orderedByStr = loggedInUser.name ? `${loggedInUser.name} (${loggedInUser.mobile})` : 'Guest / Self';
 
         const data = new FormData();
         data.append("Faculty Name", document.getElementById('faculty-name').value);
@@ -385,6 +460,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.append("Email", document.getElementById('faculty-email').value);
         data.append("Ordered Product(s)", selectedProduct);
         data.append("Grand Total", document.getElementById('cart-total').innerText);
+        data.append("Ordered By Account", orderedByStr);
         data.append("_subject", `SUN FRESH ORDER: ${selectedProduct}`);
 
         const orderPayload = {
@@ -394,7 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
             email: document.getElementById('faculty-email').value,
             products: selectedProduct,
             total: currentOrderTotal,
-            items: checkoutItems
+            items: checkoutItems,
+            orderedBy: orderedByStr
         };
 
         try {
@@ -477,7 +554,7 @@ document.addEventListener('DOMContentLoaded', () => {
         data.append("_subject", "NEW USER REVIEW - Sun Fresh Naturals");
 
         try {
-            const response = await fetch("https://formspree.io/janardhanrao1609@gmail.com", {
+            const response = await fetch("https://formspree.io/sunfreshnaturals@gmail.com", {
                 method: "POST",
                 body: data,
                 headers: { 'Accept': 'application/json' }
@@ -875,6 +952,20 @@ document.addEventListener('DOMContentLoaded', () => {
             document.getElementById('modal-price').innerText = card.querySelector('.price').innerText;
             document.getElementById('modal-description-text').innerText = data.description;
 
+            // Set Wishlist Button state in Modal
+            const modalWishlistBtn = document.getElementById('modal-wishlist-btn');
+            if (modalWishlistBtn) {
+                modalWishlistBtn.setAttribute('data-product-id', productId);
+                const currentWishlist = JSON.parse(localStorage.getItem('sunfresh_wishlist') || '[]');
+                if (currentWishlist.includes(productId)) {
+                    modalWishlistBtn.classList.add('wishlisted');
+                    modalWishlistBtn.innerHTML = '&#9829;'; // Filled heart
+                } else {
+                    modalWishlistBtn.classList.remove('wishlisted');
+                    modalWishlistBtn.innerHTML = '&#9825;'; // Outline heart
+                }
+            }
+
             // Fill stock status in modal
             const stockStatusEl = document.getElementById('modal-stock-status') || (() => {
                 const el = document.createElement('div');
@@ -1037,6 +1128,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const closeAuthX = document.getElementById('close-auth-x');
     
     const loginForm = document.getElementById('login-form');
+    const signupForm = document.getElementById('signup-form');
     const otpScreen = document.getElementById('otp-screen');
     const otpDigits = document.querySelectorAll('.otp-digit');
     const verifyOtpBtn = document.getElementById('verify-otp-btn');
@@ -1051,7 +1143,29 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Toggle Auth Modal
     openAuthBtn.addEventListener('click', () => authModal.classList.add('active'));
-    closeAuthX.addEventListener('click', () => authModal.classList.remove('active'));
+    closeAuthX.addEventListener('click', () => {
+        authModal.classList.remove('active');
+        resetAuthUI();
+    });
+
+    // Auth Tabs Switching Logic
+    const authTabs = document.querySelectorAll('.auth-tab');
+    const authForms = document.querySelectorAll('.auth-form');
+    authTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            authTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            const targetId = tab.getAttribute('data-target');
+            authForms.forEach(form => {
+                if (form.id === targetId) {
+                    form.classList.remove('hidden');
+                } else {
+                    form.classList.add('hidden');
+                }
+            });
+        });
+    });
 
     // Handle Login (Request OTP from Backend)
     const handleLoginSubmit = async (e) => {
@@ -1074,7 +1188,6 @@ document.addEventListener('DOMContentLoaded', () => {
         submitBtn.disabled = true;
         
         try {
-            // Set a timeout for the fetch call
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), 5000); // 5 sec timeout
 
@@ -1091,12 +1204,12 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.success) {
                 currentOTP = data.debugOtp; 
                 
-                // ENABLED ON-SCREEN NOTIFICATION AS REQUESTED
                 showMockSMS(currentOTP, mobile);
                 
                 // Transition UI
                 loginForm.classList.add('hidden');
                 otpScreen.classList.remove('hidden');
+                document.querySelector('.auth-tabs').classList.add('hidden');
                 
                 startOtpTimer();
                 setTimeout(() => {
@@ -1106,11 +1219,11 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.warn("Server connection failed, using Simulation Mode.");
-            // SILENT FALLBACK: If server fails, show the screen anyway
             currentOTP = generateRandomOTP();
-            showMockSMS(currentOTP, mobile); // ENABLED ON-SCREEN
+            showMockSMS(currentOTP, mobile);
             loginForm.classList.add('hidden');
             otpScreen.classList.remove('hidden');
+            document.querySelector('.auth-tabs').classList.add('hidden');
             startOtpTimer();
             setTimeout(() => {
                 const firstDigit = document.querySelector('.otp-digit');
@@ -1124,6 +1237,78 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     loginForm.addEventListener('submit', handleLoginSubmit);
+
+    // Handle Signup (Request OTP from Backend)
+    const handleSignupSubmit = async (e) => {
+        if(e) e.preventDefault();
+        
+        const name = document.getElementById('signup-name').value.trim();
+        const email = document.getElementById('signup-email').value.trim();
+        const mobile = document.getElementById('signup-mobile').value.trim();
+        const password = document.getElementById('signup-password').value;
+        const submitBtn = signupForm.querySelector('button[type="submit"]');
+        const originalText = submitBtn.innerText;
+
+        if(!mobile || mobile.length < 10) {
+            alert("Please enter a valid 10-digit mobile number.");
+            return;
+        }
+
+        // Show Loading State
+        submitBtn.innerText = "Connecting...";
+        submitBtn.disabled = true;
+
+        try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+            const res = await fetch('http://localhost:3000/api/auth/send-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ mobile }),
+                signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+            
+            const data = await res.json();
+            
+            if (data.success) {
+                currentOTP = data.debugOtp;
+                sessionStorage.setItem('temp_signup', JSON.stringify({ name, email, mobile, password }));
+                
+                showMockSMS(currentOTP, mobile);
+                
+                // Transition UI to OTP screen
+                signupForm.classList.add('hidden');
+                otpScreen.classList.remove('hidden');
+                document.querySelector('.auth-tabs').classList.add('hidden');
+                
+                startOtpTimer();
+                setTimeout(() => {
+                    const firstDigit = document.querySelector('.otp-digit');
+                    if (firstDigit) firstDigit.focus();
+                }, 300);
+            }
+        } catch (err) {
+            console.warn("Server connection failed, using Simulation Mode.");
+            currentOTP = generateRandomOTP();
+            sessionStorage.setItem('temp_signup', JSON.stringify({ name, email, mobile, password }));
+            showMockSMS(currentOTP, mobile);
+            signupForm.classList.add('hidden');
+            otpScreen.classList.remove('hidden');
+            document.querySelector('.auth-tabs').classList.add('hidden');
+            startOtpTimer();
+            setTimeout(() => {
+                const firstDigit = document.querySelector('.otp-digit');
+                if (firstDigit) firstDigit.focus();
+            }, 300);
+        } finally {
+            submitBtn.innerText = originalText;
+            submitBtn.disabled = false;
+        }
+    };
+
+    signupForm.addEventListener('submit', handleSignupSubmit);
 
     function generateRandomOTP() {
         let otp = "";
@@ -1160,9 +1345,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }, 5000);
     }
 
-    // Handle OTP Input Auto-focus
+    // Handle OTP Input Auto-focus + Enter key support
     otpDigits.forEach((digit, index) => {
         digit.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') {
+                // Trigger OTP verification on Enter key
+                verifyOtpBtn.click();
+                return;
+            }
             if (e.key >= 0 && e.key <= 9) {
                 if (index < otpDigits.length - 1) otpDigits[index + 1].focus();
             } else if (e.key === 'Backspace') {
@@ -1176,7 +1366,10 @@ document.addEventListener('DOMContentLoaded', () => {
         let enteredOTP = "";
         const digits = document.querySelectorAll('.otp-digit');
         digits.forEach(d => enteredOTP += d.value);
-        const mobile = document.getElementById('login-mobile').value;
+        
+        // Use signup mobile if signup is in progress, otherwise login mobile
+        const tempSignup = JSON.parse(sessionStorage.getItem('temp_signup'));
+        const mobile = tempSignup ? tempSignup.mobile : document.getElementById('login-mobile').value;
 
         try {
             const res = await fetch('http://localhost:3000/api/auth/verify-otp', {
@@ -1191,11 +1384,34 @@ document.addEventListener('DOMContentLoaded', () => {
                 const emailInput = document.getElementById('login-email');
                 const email = (emailInput && emailInput.value) ? emailInput.value : "Not Provided";
 
+                let displayName = "";
+                let displayEmail = "";
+                let displayInitials = "";
+
+                if (isAdmin) {
+                    displayName = "Sun Fresh Admin";
+                    displayEmail = "sunfreshnaturals@gmail.com";
+                    displayInitials = "AD";
+                } else if (tempSignup && tempSignup.mobile === mobile) {
+                    displayName = tempSignup.name;
+                    displayEmail = tempSignup.email;
+                    const nameParts = tempSignup.name.split(' ');
+                    if (nameParts.length > 1) {
+                        displayInitials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+                    } else {
+                        displayInitials = tempSignup.name.substring(0, 2).toUpperCase();
+                    }
+                } else {
+                    displayName = "Customer " + mobile.substring(6);
+                    displayEmail = email;
+                    displayInitials = mobile.substring(8);
+                }
+
                 const userData = {
-                    name: isAdmin ? "Sun Fresh Admin" : "Customer " + mobile.substring(6),
-                    email: email,
+                    name: displayName,
+                    email: displayEmail,
                     mobile: mobile,
-                    initials: isAdmin ? "AD" : mobile.substring(8),
+                    initials: displayInitials,
                     isAdmin: isAdmin,
                     orders: []
                 };
@@ -1212,17 +1428,39 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         } catch (err) {
             console.error("VERIFY ERROR:", err);
-            // FALLBACK logic for offline/server error testing
             if (enteredOTP === currentOTP && currentOTP !== "") {
                 const isAdmin = (mobile.replace(/\D/g, '').slice(-10) === "9542137161");
                 const emailInput = document.getElementById('login-email');
                 const email = (emailInput && emailInput.value) ? emailInput.value : "Not Provided";
                 
+                let displayName = "";
+                let displayEmail = "";
+                let displayInitials = "";
+
+                if (isAdmin) {
+                    displayName = "Sun Fresh Admin";
+                    displayEmail = "sunfreshnaturals@gmail.com";
+                    displayInitials = "AD";
+                } else if (tempSignup && tempSignup.mobile === mobile) {
+                    displayName = tempSignup.name;
+                    displayEmail = tempSignup.email;
+                    const nameParts = tempSignup.name.split(' ');
+                    if (nameParts.length > 1) {
+                        displayInitials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+                    } else {
+                        displayInitials = tempSignup.name.substring(0, 2).toUpperCase();
+                    }
+                } else {
+                    displayName = "Customer " + mobile.substring(6);
+                    displayEmail = email;
+                    displayInitials = mobile.substring(8);
+                }
+
                 const userData = {
-                    name: isAdmin ? "Sun Fresh Admin" : "Customer " + mobile.substring(6),
-                    email: email,
+                    name: displayName,
+                    email: displayEmail,
                     mobile: mobile,
-                    initials: isAdmin ? "AD" : mobile.substring(8),
+                    initials: displayInitials,
                     isAdmin: isAdmin,
                     orders: []
                 };
@@ -1250,8 +1488,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetAuthUI() {
         loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
         otpScreen.classList.add('hidden');
+        document.querySelector('.auth-tabs').classList.remove('hidden');
+        
+        // Reset tabs active state
+        authTabs.forEach(t => t.classList.remove('active'));
+        authTabs[0].classList.add('active'); // Default to login tab
+        
         otpDigits.forEach(d => d.value = "");
+        sessionStorage.removeItem('temp_signup');
     }
 
     backToLoginBtn.addEventListener('click', resetAuthUI);
@@ -1274,10 +1520,17 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (adminLinkSection) adminLinkSection.classList.add('hidden');
             }
+            
+            // Allow closing the Auth Modal
+            closeAuthX.classList.remove('hidden');
         } else {
             openAuthBtn.classList.remove('hidden');
             userProfileNav.classList.add('hidden');
             if (adminLinkSection) adminLinkSection.classList.add('hidden');
+            
+            // Force open Auth Modal removed to prevent auto popup on load
+            // authModal.classList.add('active');
+            // closeAuthX.classList.add('hidden');
         }
     }
 
@@ -1287,17 +1540,282 @@ document.addEventListener('DOMContentLoaded', () => {
     
     logoutBtn.addEventListener('click', () => {
         localStorage.removeItem('sunfresh_user');
+        localStorage.removeItem('sunfresh_wishlist');
         updateLoginState();
         profileSidebar.classList.remove('active');
+        window.location.href = '/index.html';
     });
 
     updateLoginState();
 
-    [authModal].forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) modal.classList.remove('active');
+    // --- Profile Information Modal Logic ---
+    const profileInfoModal = document.getElementById('profile-info-modal');
+    const openProfileInfoBtn = document.getElementById('open-profile-info');
+    const closeProfileInfoBtn = document.getElementById('close-profile-info');
+    const profileInfoForm = document.getElementById('profile-info-form');
+
+    if (openProfileInfoBtn) {
+        openProfileInfoBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const user = JSON.parse(localStorage.getItem('sunfresh_user'));
+            if (user) {
+                const profile = JSON.parse(localStorage.getItem('sunfresh_profile') || '{}');
+                document.getElementById('profile-first-name').value = profile.firstName || user.name.split(' ')[0] || '';
+                document.getElementById('profile-last-name').value = profile.lastName || user.name.split(' ').slice(1).join(' ') || '';
+                document.getElementById('profile-email-display').value = profile.email || user.email || '';
+                document.getElementById('profile-mobile-display').value = user.mobile || '';
+                document.getElementById('profile-dept').value = profile.department || '';
+            }
+            profileSidebar.classList.remove('active');
+            profileInfoModal.classList.add('active');
         });
+    }
+
+    if (closeProfileInfoBtn) {
+        closeProfileInfoBtn.addEventListener('click', () => profileInfoModal.classList.remove('active'));
+    }
+    if (profileInfoModal) {
+        profileInfoModal.addEventListener('click', (e) => {
+            if (e.target === profileInfoModal) profileInfoModal.classList.remove('active');
+        });
+    }
+
+    if (profileInfoForm) {
+        profileInfoForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const firstName = document.getElementById('profile-first-name').value.trim();
+            const lastName = document.getElementById('profile-last-name').value.trim();
+            const email = document.getElementById('profile-email-display').value.trim();
+            const department = document.getElementById('profile-dept').value;
+
+            // Save to profile storage
+            const profile = JSON.parse(localStorage.getItem('sunfresh_profile') || '{}');
+            profile.firstName = firstName;
+            profile.lastName = lastName;
+            profile.email = email;
+            profile.department = department;
+            localStorage.setItem('sunfresh_profile', JSON.stringify(profile));
+
+            // Also update main user data display name
+            const user = JSON.parse(localStorage.getItem('sunfresh_user'));
+            if (user) {
+                user.name = `${firstName} ${lastName}`.trim();
+                user.email = email;
+                const nameParts = user.name.split(' ');
+                if (nameParts.length > 1) {
+                    user.initials = (nameParts[0][0] + nameParts[nameParts.length - 1][0]).toUpperCase();
+                } else {
+                    user.initials = user.name.substring(0, 2).toUpperCase();
+                }
+                localStorage.setItem('sunfresh_user', JSON.stringify(user));
+                updateLoginState();
+            }
+
+            profileInfoModal.classList.remove('active');
+            alert('Profile updated successfully!');
+        });
+    }
+
+    // --- Address Management Modal Logic ---
+    const addressModal = document.getElementById('address-modal');
+    const openAddressMgmtBtn = document.getElementById('open-address-mgmt');
+    const closeAddressModalBtn = document.getElementById('close-address-modal');
+    const addressForm = document.getElementById('address-form');
+
+    function renderSavedAddresses() {
+        const container = document.getElementById('saved-addresses-list');
+        if (!container) return;
+        const addresses = JSON.parse(localStorage.getItem('sunfresh_addresses') || '[]');
+        
+        if (addresses.length === 0) {
+            container.innerHTML = '<p style="color: #999; font-size: 0.9rem; text-align: center; padding: 16px; background: #f9f9f9; border-radius: 10px;">No saved addresses yet.</p>';
+            return;
+        }
+
+        container.innerHTML = addresses.map((addr, idx) => `
+            <div style="background: #f8f5f0; border-radius: 12px; padding: 16px; margin-bottom: 12px; border-left: 4px solid var(--primary-color, #2D5A27); position: relative;">
+                <div style="font-weight: 600; margin-bottom: 4px;">${addr.name}</div>
+                <div style="font-size: 0.88rem; color: #555; line-height: 1.5;">
+                    ${addr.line}<br>
+                    ${addr.city}, ${addr.state} - ${addr.pin}<br>
+                    📞 ${addr.phone}
+                </div>
+                <button onclick="deleteSavedAddress(${idx})" style="position: absolute; top: 12px; right: 12px; background: #e74c3c; color: white; border: none; border-radius: 6px; padding: 4px 10px; font-size: 0.78rem; cursor: pointer; font-weight: 600;">Delete</button>
+            </div>
+        `).join('');
+    }
+
+    window.deleteSavedAddress = (index) => {
+        const addresses = JSON.parse(localStorage.getItem('sunfresh_addresses') || '[]');
+        addresses.splice(index, 1);
+        localStorage.setItem('sunfresh_addresses', JSON.stringify(addresses));
+        renderSavedAddresses();
+    };
+
+    if (openAddressMgmtBtn) {
+        openAddressMgmtBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            profileSidebar.classList.remove('active');
+            renderSavedAddresses();
+            addressModal.classList.add('active');
+        });
+    }
+
+    if (closeAddressModalBtn) {
+        closeAddressModalBtn.addEventListener('click', () => addressModal.classList.remove('active'));
+    }
+    if (addressModal) {
+        addressModal.addEventListener('click', (e) => {
+            if (e.target === addressModal) addressModal.classList.remove('active');
+        });
+    }
+
+    if (addressForm) {
+        addressForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const newAddr = {
+                name: document.getElementById('addr-name').value.trim(),
+                phone: document.getElementById('addr-phone').value.trim(),
+                line: document.getElementById('addr-line').value.trim(),
+                city: document.getElementById('addr-city').value.trim(),
+                pin: document.getElementById('addr-pin').value.trim(),
+                state: document.getElementById('addr-state').value.trim()
+            };
+
+            const addresses = JSON.parse(localStorage.getItem('sunfresh_addresses') || '[]');
+            addresses.push(newAddr);
+            localStorage.setItem('sunfresh_addresses', JSON.stringify(addresses));
+            
+            addressForm.reset();
+            renderSavedAddresses();
+            alert('Address saved successfully!');
+        });
+    }
+
+    // Allow closing auth modal by clicking backdrop (regardless of login state)
+    authModal.addEventListener('click', (e) => {
+        if (e.target === authModal) {
+            authModal.classList.remove('active');
+            resetAuthUI();
+        }
     });
+
+    // --- Wishlist Heart Button Logic ---
+    const wishlist = JSON.parse(localStorage.getItem('sunfresh_wishlist') || '[]');
+
+    // Dynamically inject wishlist heart buttons into each product card
+    document.querySelectorAll('.product-card').forEach(card => {
+        const productId = card.getAttribute('data-product-id');
+        const imgWrapper = card.querySelector('.img-wrapper');
+        if (!imgWrapper || imgWrapper.querySelector('.wishlist-btn')) return; // Already has one
+
+        const heartBtn = document.createElement('button');
+        heartBtn.className = 'wishlist-btn';
+        heartBtn.setAttribute('data-product-id', productId);
+        heartBtn.setAttribute('title', 'Add to Wishlist');
+
+        // Set initial state
+        if (wishlist.includes(productId)) {
+            heartBtn.classList.add('wishlisted');
+            heartBtn.innerHTML = '&#9829;'; // Filled heart ♥
+        } else {
+            heartBtn.innerHTML = '&#9825;'; // Outline heart ♡
+        }
+
+        heartBtn.addEventListener('click', (e) => {
+            e.stopPropagation(); // Prevent product card click from firing
+
+            // Check if user is logged in before allowing wishlist
+            const user = localStorage.getItem('sunfresh_user');
+            if (!user) {
+                const authModalEl = document.getElementById('auth-modal');
+                if (authModalEl) authModalEl.classList.add('active');
+                return;
+            }
+
+            const pid = heartBtn.getAttribute('data-product-id');
+            const currentWishlist = JSON.parse(localStorage.getItem('sunfresh_wishlist') || '[]');
+            
+            if (currentWishlist.includes(pid)) {
+                // Remove from wishlist
+                const updated = currentWishlist.filter(id => id !== pid);
+                localStorage.setItem('sunfresh_wishlist', JSON.stringify(updated));
+                heartBtn.classList.remove('wishlisted');
+                heartBtn.innerHTML = '&#9825;'; // Outline heart
+                
+                // Sync with modal wishlist btn if open for this product
+                const mWishlistBtn = document.getElementById('modal-wishlist-btn');
+                if (mWishlistBtn && mWishlistBtn.getAttribute('data-product-id') === pid) {
+                    mWishlistBtn.classList.remove('wishlisted');
+                    mWishlistBtn.innerHTML = '&#9825;';
+                }
+            } else {
+                // Add to wishlist
+                currentWishlist.push(pid);
+                localStorage.setItem('sunfresh_wishlist', JSON.stringify(currentWishlist));
+                heartBtn.classList.add('wishlisted');
+                heartBtn.innerHTML = '&#9829;'; // Filled heart
+                
+                // Sync with modal wishlist btn if open for this product
+                const mWishlistBtn = document.getElementById('modal-wishlist-btn');
+                if (mWishlistBtn && mWishlistBtn.getAttribute('data-product-id') === pid) {
+                    mWishlistBtn.classList.add('wishlisted');
+                    mWishlistBtn.innerHTML = '&#9829;';
+                }
+            }
+        });
+
+        imgWrapper.appendChild(heartBtn);
+    });
+
+    // Wishlist toggle for Modal Wishlist Button
+    const modalWishlistBtn = document.getElementById('modal-wishlist-btn');
+    if (modalWishlistBtn) {
+        modalWishlistBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+
+            const user = localStorage.getItem('sunfresh_user');
+            if (!user) {
+                // Keep product modal open or close it? The user said: "also when the user tries to wishlist the product make sure even there also the Log in pop up appears !!"
+                // So show the auth modal
+                const authModalEl = document.getElementById('auth-modal');
+                if (authModalEl) authModalEl.classList.add('active');
+                return;
+            }
+
+            const pid = modalWishlistBtn.getAttribute('data-product-id');
+            if (!pid) return;
+
+            const currentWishlist = JSON.parse(localStorage.getItem('sunfresh_wishlist') || '[]');
+            let updated;
+            
+            if (currentWishlist.includes(pid)) {
+                // Remove from wishlist
+                updated = currentWishlist.filter(id => id !== pid);
+                modalWishlistBtn.classList.remove('wishlisted');
+                modalWishlistBtn.innerHTML = '&#9825;'; // Outline heart
+            } else {
+                // Add to wishlist
+                currentWishlist.push(pid);
+                updated = currentWishlist;
+                modalWishlistBtn.classList.add('wishlisted');
+                modalWishlistBtn.innerHTML = '&#9829;'; // Filled heart
+            }
+            localStorage.setItem('sunfresh_wishlist', JSON.stringify(updated));
+
+            // Sync with corresponding product card wishlist button
+            const cardWishlistBtn = document.querySelector(`.product-card[data-product-id="${pid}"] .wishlist-btn`);
+            if (cardWishlistBtn) {
+                if (updated.includes(pid)) {
+                    cardWishlistBtn.classList.add('wishlisted');
+                    cardWishlistBtn.innerHTML = '&#9829;';
+                } else {
+                    cardWishlistBtn.classList.remove('wishlisted');
+                    cardWishlistBtn.innerHTML = '&#9825;';
+                }
+            }
+        });
+    }
 
     // Check if running from file system
     if (window.location.protocol === 'file:') {

@@ -11,7 +11,7 @@
       "threshold": 10
     },
     "curry-leaves": {
-      "stock": 94,
+      "stock": 90,
       "threshold": 20
     },
     "guava-leaves": {
@@ -63,5 +63,46 @@
       "threshold": 10
     }
   },
-  "orders": []
+  "orders": [
+    {
+      "id": "ORD-1780618935626",
+      "date": "2026-06-05T00:22:15.626Z",
+      "status": "confirmed",
+      "customerName": "Vishnu sharma",
+      "department": "Electrical & Electronics Engineering",
+      "mobile": "9652492735",
+      "email": "jangadonald@gmail.com",
+      "products": "Extra Pure Curry Leaves Powder - 200 g (Pack of 3)",
+      "total": "₹1080",
+      "items": [
+        {
+          "id": "curry-leaves",
+          "name": "Extra Pure Curry Leaves Powder - 200 g (Pack of 3)",
+          "price": "₹1080",
+          "quantity": 3
+        }
+      ],
+      "orderedBy": "Janga Donald (9652492735)"
+    },
+    {
+      "id": "ORD-1780618913143",
+      "date": "2026-06-05T00:21:53.143Z",
+      "status": "confirmed",
+      "customerName": "Janga Donald",
+      "department": "Internet of Things (IoT)",
+      "mobile": "9652492735",
+      "email": "jangadonald@gmail.com",
+      "products": "Extra Pure Curry Leaves Powder - 100 g (Pack of 1)",
+      "total": "₹180",
+      "items": [
+        {
+          "id": "curry-leaves",
+          "name": "Extra Pure Curry Leaves Powder - 100 g (Pack of 1)",
+          "price": "₹180",
+          "quantity": 1
+        }
+      ],
+      "orderedBy": "Janga Donald (9652492735)"
+    }
+  ]
 }

@@ -289,7 +289,7 @@ app.delete('/api/reviews/:id', (req, res) => {
 // --- AUTH & OTP ---
 let tempOTPs = {};
 const ADMIN_MOBILE = "9542137161";
-const ADMIN_EMAIL = "adminsfn@gmail.com";
+const ADMIN_EMAIL = "sunfreshnaturals@gmail.com";
 
 app.post('/api/auth/send-otp', (req, res) => {
     const { mobile, email, isAdminLogin } = req.body;
